@@ -1,0 +1,33 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+mlflow = "==2.5.0"
+scikit-learn = "*"
+xgboost = "*"
+psycopg2-binary = "*"
+nltk = "*"
+contractions = "*"
+unidecode = "*"
+evidently = "*"
+prefect = "*"
+psycopg-binary = "*"
+psycopg = "*"
+seaborn = "*"
+
+[dev-packages]
+pre-commit = "*"
+isort = "*"
+black = "*"
+pytest = "*"
+pylint = "*"
+ipykernel = "*"
+httpx = "*"
+uvicorn = "*"
+mangum = "*"
+
+[requires]
+python_version = "3.9"
