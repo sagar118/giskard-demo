@@ -1,0 +1,33 @@
+name: Dev-Environment-CI-CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Checkout Code
+            uses: actions/checkout@v3
+
+          - name: Set up Python
+            uses: actions/setup-python@v2
+            with:
+              python-version: 3.9.16
+
+          - name: Install dependencies
+            run: |
+              pip install --upgrade pip
+              pip install pipenv && pipenv install
+
+          - name: execute test script
+            run: python scan.py
+            id: test_output

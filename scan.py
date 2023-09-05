@@ -1,10 +1,36 @@
-"""
-Emoticons Module
-This module defines a dictionary of emoticons along with their meanings.
+import pickle
+import re
+import string
 
-Emoticons:
-    A dictionary containing emoticons as keys and their corresponding meanings as values.
-"""
+import contractions
+import pandas as pd
+import unidecode
+from giskard import Dataset, Model, scan, testing
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+train = pd.read_csv("./data/raw/train.csv")
+test = pd.read_csv("./data/raw/test.csv")
+
+# Drop the duplicates from the dataframe
+train = train.drop_duplicates(subset=["text", "target"]).reset_index(drop=True)
+
+# After manually going through the tweets with different target values
+# Assign the target values to the tweets to find the duplicates
+non_disaster = [4253, 4182, 3212, 4249, 6535, 1190, 4239, 3936, 1214, 6018]
+disaster = [4193, 2803, 4554, 4250, 1207, 4317, 620, 5573]
+train.loc[non_disaster, "target"] = 0
+train.loc[disaster, "target"] = 1
+
+# Again drop the duplicates from the dataframe
+train = train.drop_duplicates(subset=["text", "target"]).reset_index(drop=True)
+
+train_df = train[["text", "target"]]
+
+train_df = train_df.iloc[:5]
+
+wrapped_dataset = Dataset(df=train_df, target="target")  # Ground truth variable
 
 EMOTICONS = {
     ":‑\)": "Happy face or smiley",
@@ -227,3 +253,113 @@ EMOTICONS = {
     "\(\*￣m￣\)": "Dissatisfied",
     "\(‘A`\)": "Snubbed or Deflated",
 }
+
+
+def clean_text(text):
+    """
+    Clean Text
+    Preprocess the given text by removing noise, special characters, URLs, etc.
+
+    Args:
+        text (str): Input text to be cleaned.
+
+    Returns:
+        str: Cleaned and preprocessed text.
+    """
+    # Convert the text to lowercase
+    text = text.lower()
+
+    # Remove HTML entities and special characters
+    text = re.sub(r"(&amp;|&lt;|&gt;|\n|\t)", " ", text)
+
+    # Remove URLs
+    text = re.sub(r"https?://\S+|www\.\S+", " ", text)  # remove urls
+
+    # Remove email addresses
+    text = re.sub(r"\S+@\S+", " ", text)
+
+    # Remove dates in various formats (e.g., DD-MM-YYYY, MM/DD/YY)
+    text = re.sub(r"\d{1,2}(st|nd|rd|th)?[-./]\d{1,2}[-./]\d{2,4}", " ", text)
+
+    # Remove month-day-year patterns (e.g., Jan 1st, 2022)
+    pattern = re.compile(
+        r"(\d{1,2})?(st|nd|rd|th)?[-./,]?\s?(of)?\s?([J|j]an(uary)?|[F|f]eb(ruary)?|[Mm]ar(ch)?|[Aa]pr(il)?|[Mm]ay|[Jj]un(e)?|[Jj]ul(y)?|[Aa]ug(ust)?|[Ss]ep(tember)?|[Oo]ct(ober)?|[Nn]ov(ember)?|[Dd]ec(ember)?)\s?(\d{1,2})?(st|nd|rd|th)?\s?[-./,]?\s?(\d{2,4})?"
+    )
+    text = pattern.sub(r" ", text)
+
+    # Remove emoticons
+    emoticons_pattern = re.compile("(" + "|".join(emo for emo in EMOTICONS) + ")")
+    text = emoticons_pattern.sub(r" ", text)
+
+    # Remove mentions (@) and hashtags (#)
+    text = re.sub(r"(@\S+|#\S+)", " ", text)
+
+    # Fix contractions (e.g., "I'm" becomes "I am")
+    text = contractions.fix(text)
+
+    # Remove punctuation
+    PUNCTUATIONS = string.punctuation
+    text = text.translate(str.maketrans("", "", PUNCTUATIONS))
+
+    # Remove unicode
+    text = unidecode.unidecode(text)
+
+    # Replace multiple whitespaces with a single space
+    text = re.sub(r"\s+", " ", text)
+
+    return text
+
+
+params = {"solver": "liblinear", "penalty": "l2", "C": 1.0}
+
+with open("model.pkl", "rb") as f:
+    pipeline = pickle.load(f)
+
+
+def prediction_function(df):
+    # The pre-processor can be a pipeline of one-hot encoding, imputer, scaler, etc.
+    df["cleaned_text"] = df.text.apply(lambda x: clean_text(x))
+    return pipeline.predict_proba(df["cleaned_text"])
+
+
+wrapped_model = Model(
+    model=prediction_function,
+    model_type="classification",
+    classification_labels=[
+        0,
+        1,
+    ],  # Their order MUST be identical to the prediction_function's output order
+    feature_names=["text"],  # Default: all columns of your dataset
+)
+
+# By following previous user guides, you will be shown how to use your own model and dataset.
+# For example purposes, we will use the demo model and dataset.
+# wrapped_model = Model(model=model, model_type="classification")
+
+scan_results = scan(wrapped_model, wrapped_dataset)
+
+result_df = scan_results.to_dataframe()
+result_df.to_csv("scan_results.csv")
+
+# test_suite = scan_results.generate_test_suite("My first test suite")
+
+# You can run the test suite locally to verify that it reproduces the issues
+# test_suite.run()
+
+test_suite = scan_results.generate_test_suite("My first test suite")
+test_result = test_suite.add_test(
+    testing.test_accuracy(wrapped_model, wrapped_dataset, threshold=0.75)
+).run()
+
+if scan_results.has_issues():
+    print("Your model has vulnerabilities")
+    # exit(1)
+else:
+    print("Your model is safe")
+    # exit(0)
+
+for test_result in test_result.results:
+    print(f"Test {test_result[0]}\nStatus: {test_result[1].passed}")
+    print("Threshold: ", test_result[2]["threshold"])
+    print("Score: ", test_result[1].metric)
+    print("------------------")

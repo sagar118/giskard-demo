@@ -11,10 +11,10 @@ It provides two endpoints:
 import os
 
 import uvicorn
-from model import ModelService
-from mangum import Mangum
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from mangum import Mangum
+from model import ModelService
 
 # MODEL_BUCKET = os.getenv('MODEL_BUCKET', None)
 # EXPERIMENT_ID = os.getenv('EXPERIMENT_ID', None)
@@ -30,7 +30,7 @@ app = FastAPI()
 handler = Mangum(app)
 
 
-@app.get('/')
+@app.get("/")
 def read_root():
     """
     Root Endpoint
@@ -40,11 +40,11 @@ def read_root():
         dict: A dictionary containing a greeting message.
     """
     return {
-        'hello': 'world',
+        "hello": "world",
     }
 
 
-@app.get('/predict')
+@app.get("/predict")
 def prediction(data: str):
     """
     Prediction Endpoint
@@ -60,7 +60,7 @@ def prediction(data: str):
     # y_pred = 1
     return JSONResponse(
         {
-            'prediction': int(y_pred),
+            "prediction": int(y_pred),
         }
     )
 

@@ -17,6 +17,7 @@ prefect = "*"
 psycopg-binary = "*"
 psycopg = "*"
 seaborn = "*"
+giskard = ">=2.0.0b"
 
 [dev-packages]
 pre-commit = "*"
@@ -31,3 +32,4 @@ mangum = "*"
 
 [requires]
 python_version = "3.9"
+python_full_version = "3.9.16"

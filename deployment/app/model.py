@@ -6,22 +6,19 @@ Classes:
     ModelService: A class that provides methods for loading the model, preprocessing text data, and making predictions.
 """
 
-import re
 import os
+import re
 import string
 
+import contractions
 import mlflow
 import pandas as pd
 import unidecode
-import contractions
-
 from mlflow.tracking import MlflowClient
 from utils.emoticons import EMOTICONS
 
 MODEL_NAME = os.getenv("MODEL_NAME", "logistic-regression")
-TRACKING_SERVER_HOST = os.getenv(
-    "TRACKING_SERVER_HOST", "localhost"
-)
+TRACKING_SERVER_HOST = os.getenv("TRACKING_SERVER_HOST", "localhost")
 
 client = MlflowClient(tracking_uri=f"http://{TRACKING_SERVER_HOST}:8888")
 mlflow.set_tracking_uri(f"http://{TRACKING_SERVER_HOST}:8888")
@@ -46,7 +43,7 @@ class ModelService:
         predict(data: str): Make a prediction using the loaded model on the provided data.
     """
 
-    def __init__(self, stage='Staging'):
+    def __init__(self, stage="Staging"):
         self.clf = self.load_model(stage)
 
     def load_model(self, stage):
@@ -63,7 +60,9 @@ class ModelService:
         )
         for model in mlflow_model:
             if model.current_stage == stage:
-                clf = mlflow.pyfunc.load_model(model_uri=f"models:/{model.name}/{model.version}")
+                clf = mlflow.pyfunc.load_model(
+                    model_uri=f"models:/{model.name}/{model.version}"
+                )
                 break
         return clf
 
@@ -79,7 +78,7 @@ class ModelService:
             dict: A dictionary containing preprocessed features.
         """
         features = {}
-        features['cleaned_text'] = self.clean_text(data)
+        features["cleaned_text"] = self.clean_text(data)
         df = pd.DataFrame(features, index=[0])
         return df
 
@@ -98,44 +97,42 @@ class ModelService:
         text = text.lower()
 
         # Remove HTML entities and special characters
-        text = re.sub(r'(&amp;|&lt;|&gt;|\n|\t)', ' ', text)
+        text = re.sub(r"(&amp;|&lt;|&gt;|\n|\t)", " ", text)
 
         # Remove URLs
-        text = re.sub(r'https?://\S+|www\.\S+', ' ', text)  # remove urls
+        text = re.sub(r"https?://\S+|www\.\S+", " ", text)  # remove urls
 
         # Remove email addresses
-        text = re.sub(r'\S+@\S+', ' ', text)
+        text = re.sub(r"\S+@\S+", " ", text)
 
         # Remove dates in various formats (e.g., DD-MM-YYYY, MM/DD/YY)
-        text = re.sub(r'\d{1,2}(st|nd|rd|th)?[-./]\d{1,2}[-./]\d{2,4}', ' ', text)
+        text = re.sub(r"\d{1,2}(st|nd|rd|th)?[-./]\d{1,2}[-./]\d{2,4}", " ", text)
 
         # Remove month-day-year patterns (e.g., Jan 1st, 2022)
         pattern = re.compile(
-            r'(\d{1,2})?(st|nd|rd|th)?[-./,]?\s?(of)?\s?([J|j]an(uary)?|[F|f]eb(ruary)?|[Mm]ar(ch)?|[Aa]pr(il)?|[Mm]ay|[Jj]un(e)?|[Jj]ul(y)?|[Aa]ug(ust)?|[Ss]ep(tember)?|[Oo]ct(ober)?|[Nn]ov(ember)?|[Dd]ec(ember)?)\s?(\d{1,2})?(st|nd|rd|th)?\s?[-./,]?\s?(\d{2,4})?'
+            r"(\d{1,2})?(st|nd|rd|th)?[-./,]?\s?(of)?\s?([J|j]an(uary)?|[F|f]eb(ruary)?|[Mm]ar(ch)?|[Aa]pr(il)?|[Mm]ay|[Jj]un(e)?|[Jj]ul(y)?|[Aa]ug(ust)?|[Ss]ep(tember)?|[Oo]ct(ober)?|[Nn]ov(ember)?|[Dd]ec(ember)?)\s?(\d{1,2})?(st|nd|rd|th)?\s?[-./,]?\s?(\d{2,4})?"
         )
-        text = pattern.sub(r' ', text)
+        text = pattern.sub(r" ", text)
 
         # Remove emoticons
-        emoticons_pattern = re.compile(
-            u'(' + u'|'.join(emo for emo in EMOTICONS) + u')'
-        )
-        text = emoticons_pattern.sub(r' ', text)
+        emoticons_pattern = re.compile("(" + "|".join(emo for emo in EMOTICONS) + ")")
+        text = emoticons_pattern.sub(r" ", text)
 
         # Remove mentions (@) and hashtags (#)
-        text = re.sub(r'(@\S+|#\S+)', ' ', text)
+        text = re.sub(r"(@\S+|#\S+)", " ", text)
 
         # Fix contractions (e.g., "I'm" becomes "I am")
         text = contractions.fix(text)
 
         # Remove punctuation
         PUNCTUATIONS = string.punctuation
-        text = text.translate(str.maketrans('', '', PUNCTUATIONS))
+        text = text.translate(str.maketrans("", "", PUNCTUATIONS))
 
         # Remove unicode
         text = unidecode.unidecode(text)
 
         # Replace multiple whitespaces with a single space
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
 
         return text
 
@@ -151,5 +148,5 @@ class ModelService:
             Any: The prediction result.
         """
         features = self.prepare_data(data)
-        prediction = self.clf.predict(features['cleaned_text'])
+        prediction = self.clf.predict(features["cleaned_text"])
         return prediction[0]
