@@ -1,3 +1,4 @@
+import os
 import pickle
 import re
 import string
@@ -373,4 +374,8 @@ for idx, test_result in enumerate(test_result.results):
 #     print("Score: ", test_result[1].metric)
 #     print("------------------")
 
-print(output)
+# print(output)
+
+env_file = os.getenv("GITHUB_ENV")
+with open(env_file, "a") as myfile:
+    myfile.write(f"OUTPUT={output}")

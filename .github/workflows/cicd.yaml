@@ -33,12 +33,12 @@ jobs:
 
           - name: execute test script
             run: |
-              export OUTPUT=$(python scan.py)
+              python scan.py
               echo "Output: "
-              echo $OUTPUT
+              echo ${{ env.OUTPUT }}
             id: test_output
 
           - name: comment on PR
             uses: mshick/add-pr-comment@v2
             with:
-              message: ${{ steps.test_output.outputs.OUTPUT }}
+              message: ${{ env.OUTPUT }}
