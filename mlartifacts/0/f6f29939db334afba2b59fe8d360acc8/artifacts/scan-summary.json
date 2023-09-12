@@ -1,0 +1,1 @@
+{"columns":["domain","metric","deviation","description"],"data":[["Feature `text`","Add typos","7.89% of samples changed prediction after perturbation",""],["Feature `text`","Switch Gender","50.00% of samples changed prediction after perturbation",""]]}
