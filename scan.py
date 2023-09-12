@@ -358,8 +358,19 @@ else:
     print("Your model is safe")
     # exit(0)
 
-for test_result in test_result.results:
-    print(f"Test {test_result[0]}\nStatus: {test_result[1].passed}")
-    print("Threshold: ", test_result[2]["threshold"])
-    print("Score: ", test_result[1].metric)
-    print("------------------")
+output = dict()
+for idx, test_result in enumerate(test_result.results):
+    output[idx] = {
+        "Test": test_result[0],
+        "Status": test_result[1].passed,
+        "Threshold": test_result[2]["threshold"],
+        "Score": test_result[1].metric,
+    }
+
+# for test_result in test_result.results:
+#     print(f"Test {test_result[0]}\nStatus: {test_result[1].passed}")
+#     print("Threshold: ", test_result[2]["threshold"])
+#     print("Score: ", test_result[1].metric)
+#     print("------------------")
+
+print(output)
